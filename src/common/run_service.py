@@ -5,7 +5,7 @@ import threading
 from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.daily_pipeline import DailyPipeline
 from src.common.config_loader import load_config
-from src.inventory.collector import InventoryCollector, RequestFetcher
+from src.inventory.collector import FetchError, InventoryCollector, RequestFetcher
 
 class OperationalPayload:
     """Small production adapter feeding the shared pipeline finalization path."""
@@ -32,7 +32,13 @@ class OperationalPayload:
                 # the discovered URL (including links found while crawling),
                 # rather than silently falling back to the homepage.
                 url=getattr(record,"url",None) or target.base_url
-                response=self.transport.fetch(url); responses[url]={"status_code":response.status_code,"html":response.text,"elapsed_seconds":response.elapsed_seconds,"headers":response.headers}
+                try:
+                    response=self.transport.fetch(url)
+                    responses[url]={"status_code":response.status_code,"html":response.text,"elapsed_seconds":response.elapsed_seconds,"headers":response.headers}
+                except FetchError:
+                    # Keep an unavailable URL in the shared pipeline so an
+                    # operational run still produces a partial report.
+                    responses[url]={"status_code":0,"html":"","elapsed_seconds":0,"headers":{}}
         return pipeline.run_raw_fixture({"responses":responses,"max_requests":self.max_urls,"include_root":True,"crawl_internal":True},target_id=targets[0],base_url=config.targets[targets[0]].base_url,run_id=run_id)
 
 class DailyRunService:

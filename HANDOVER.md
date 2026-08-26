@@ -12,6 +12,7 @@
 - 최대 URL 수는 기존 안전 제한(10)을 그대로 공유하며, 발견된 URL별 응답을 공통 raw fixture 경로로 전달해 JSON·XLSX·이슈 상태를 생성한다.
 - fixture 검증 `tests/test_dashboard_operational.py` 7개, 전체 회귀 `223 passed`.
 - 이 환경의 실제 HTTPS 요청은 프록시·직접 HTTP·브라우저 transport 모두 차단되어 운영 결과 생성까지 도달하지 못했다. 일반 PowerShell에서 다음 명령으로 재개한다: `python run_all.py --mode daily --target fruit --max-urls 10`.
+- 연결 계층 실패 URL도 운영 결과에 `점검 불가`로 보존하도록 보완했으며, 차단 환경에서도 실행 종료·JSON·XLSX 생성까지 확인했다.
 
 - E: 접속 방식 진단과 다중 transport mock 테스트 완료. 실제 10페이지 운영시험은 Codex 환경 차단으로 미완료이며 50페이지·전체 확대도 미완료다.
 - F: 자동 배치 fixture 통합 검증 완료.
