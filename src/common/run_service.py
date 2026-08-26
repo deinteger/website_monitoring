@@ -5,6 +5,7 @@ import threading
 from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.daily_pipeline import DailyPipeline
 from src.common.config_loader import load_config
+from src.inventory.collector import InventoryCollector, RequestFetcher
 
 class OperationalPayload:
     """Small production adapter feeding the shared pipeline finalization path."""
@@ -20,6 +21,16 @@ class OperationalPayload:
                           "checked_at":datetime.now(timezone.utc).isoformat(),
                           "transport":response.actual_transport,"connection_result":response.connection_result})
         return {"page_results":pages,"coverage_summary":{},"run_metadata":{"target":self.target,"max_urls":self.max_urls}}
+    def run_full(self, pipeline, run_id):
+        config=load_config("config"); targets=list(config.targets) if self.target=="all" else [self.target]; responses={}
+        for identifier in targets:
+            target=config.targets[identifier]
+            fetcher=RequestFetcher(user_agent=config.crawl.user_agent,timeout=config.crawl.timeout_seconds,max_retries=config.crawl.max_retries,interval=config.crawl.request_interval_seconds,max_requests=self.max_urls,transport=self.transport)
+            inventory=InventoryCollector(target,fetcher,max_requests=self.max_urls).collect()
+            for record in inventory.records[:self.max_urls]:
+                url=getattr(record,"normalized_url",None) or next(iter(getattr(record,"original_urls",()) or (target.base_url,)))
+                response=self.transport.fetch(url); responses[url]={"status_code":response.status_code,"html":response.text,"elapsed_seconds":response.elapsed_seconds,"headers":response.headers}
+        return pipeline.run_raw_fixture({"responses":responses,"max_requests":self.max_urls},target_id=targets[0],base_url=config.targets[targets[0]].base_url,run_id=run_id)
 
 class DailyRunService:
     def __init__(self, state_dir="state", output_root="output"):
@@ -57,7 +68,8 @@ class DailyRunService:
             if fixture is not None:
                 result=pipeline.run_raw_fixture(fixture,run_id=run_id) if fixture.get("responses") else pipeline.run_offline(fixture,run_id=run_id)
             else:
-                result=pipeline.run_with_transport(OperationalPayload(transport,self.status.get("target","all"),self.status.get("max_urls",10)),run_id=run_id,transport_name=getattr(transport,"name","auto"))
+                adapter=OperationalPayload(transport,self.status.get("target","all"),self.status.get("max_urls",10))
+                result=adapter.run_full(pipeline,run_id) if fixture is None else pipeline.run_with_transport(adapter,run_id=run_id,transport_name=getattr(transport,"name","auto"))
             result.setdefault("exit_code", 0 if result.get("status") == "completed" else 2)
             public={k:v for k,v in result.items() if k in {"run_id","status","exit_code","report_path","execution_stages"}}
             with self._guard: self.status.update(public,status="completed" if result.get("exit_code")==0 else "partial_failed",stage="finished",progress=100,ended_at=datetime.now(timezone.utc).isoformat(),processed_count=len((fixture or {}).get("page_results",[])))
