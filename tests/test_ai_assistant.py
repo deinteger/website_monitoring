@@ -19,7 +19,8 @@ def test_ai_uses_selected_context_and_limits_history(tmp_path):
     out=a.chat("무엇이 문제인가?",[{"role":"user","content":"a"},{"role":"user","content":"b"}])
     assert out["evidence"][0]["issue_key"]=="i1" and len(c.calls[0])==3 and "https://a" in c.calls[0][-1]["content"]
 
-def test_ai_disabled_without_key_and_allowed_endpoint():
+def test_ai_disabled_without_key_and_allowed_endpoint(monkeypatch):
+    monkeypatch.delenv("TIMELYGPT_ENABLED",raising=False)
     a=AIAssistant("missing",{"enabled":False})
     assert a.chat("질문")["available"] is False
     try: TimelyGPTClient(base_url="https://evil.example")
@@ -74,7 +75,8 @@ def test_evidence_shape(tmp_path):
     (tmp_path/"issues.json").write_text(json.dumps({"page_results":[{"issue_key":"k","url":"https://x"}]}),encoding="utf-8")
     out=AIAssistant(tmp_path,{"enabled":True,"model":"mock-text"},MockClient()).chat("q"); assert out["evidence"][0]["url"]=="https://x"
 
-def test_disabled_does_not_call_client(tmp_path):
+def test_disabled_does_not_call_client(tmp_path,monkeypatch):
+    monkeypatch.delenv("TIMELYGPT_ENABLED",raising=False)
     c=MockClient(); assert AIAssistant(tmp_path,{"enabled":False},c).chat("q")["available"] is False and not c.calls
 
 def test_model_passed_to_client(tmp_path):

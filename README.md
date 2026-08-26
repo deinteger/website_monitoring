@@ -41,6 +41,14 @@ TimelyGPT 기반 AI 보조점검·결과 질의응답을 제공하는 로컬 Pyt
 - 다음 작업: 접속 가능한 일반 PowerShell에서 실제 사이트별 10페이지 시험
 
 실행 예: `python run_all.py --mode daily --target all --max-urls 10`
+
+## 실운영 AI 설정
+
+1. `.env.example`을 복사하여 `.env` 생성
+2. `.env`에 실제 API 키와 모델명 입력
+3. `start_dashboard.bat` 실행
+
+`.env`는 Git에 포함되지 않으며, 환경변수는 프로젝트 루트의 `.env`에서 자동으로 읽습니다. 실제 키는 문서나 로그에 기록하지 않습니다.
 # 10페이지 실제 운영시험 재개 명령
 
 전체 사이트:

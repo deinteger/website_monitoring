@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.daily_pipeline import DailyPipeline
+from src.common.env_loader import load_project_env
 
 def main(argv=None):
+    load_project_env()
     parser = argparse.ArgumentParser(description="Run the NIHHS daily pipeline")
     parser.add_argument("--offline-fixture", type=Path, help="local fixture used for offline validation")
     parser.add_argument("--state-dir", type=Path, default=Path("state"))

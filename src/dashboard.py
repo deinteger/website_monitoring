@@ -11,6 +11,7 @@ from src.daily_pipeline import DailyPipeline
 from src.common.run_service import DailyRunService
 from src.common.http_transport import build_transport
 from src.ai_assistant import AIAssistant
+from src.common.env_loader import load_project_env
 
 WEB_ROOT=Path(__file__).resolve().parent.parent / "web"
 
@@ -30,6 +31,7 @@ def safe_screenshot(root, name):
     return path if path.suffix.lower()==".png" and base in path.parents and path.is_file() else None
 
 def make_handler(state_dir="state", output_root="output", *, allow_fixture=False, transport_factory=None, config_dir="config"):
+    load_project_env()
     service=DailyRunService(state_dir, output_root)
     if transport_factory is None:
         cfg=yaml.safe_load((Path(config_dir)/"rules.yaml").read_text(encoding="utf-8")) or {}
@@ -115,6 +117,7 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
     return Handler
 
 def main(argv=None):
+    load_project_env()
     import argparse
     parser=argparse.ArgumentParser(); parser.add_argument("--port",type=int); parser.add_argument("--state-dir",default="state"); parser.add_argument("--output-root",default="output"); parser.add_argument("--config-dir",default="config"); args=parser.parse_args(argv)
     port=args.port or settings(args.config_dir)

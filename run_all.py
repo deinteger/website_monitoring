@@ -13,6 +13,7 @@ from src.inventory.url_normalizer import merge_occurrences, policy_from_config
 from src.inventory.comparator import compare_inventory
 from src.daily_pipeline import run_offline_fixture
 from src.common.http_transport import build_transport
+from src.common.env_loader import load_project_env
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -31,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_project_env()
     args = build_parser().parse_args(argv)
     if args.offline_fixture:
         if args.mode != "daily":
