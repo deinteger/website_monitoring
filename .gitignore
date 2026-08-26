@@ -1,0 +1,13 @@
+.pytest-tmp/
+.pytest-tmp*/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.env
+.venv/
+state/
+output/
+screenshots/
+logs/
+project_sources/
+handover/archive/

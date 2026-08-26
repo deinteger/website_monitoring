@@ -1,0 +1,1 @@
+"""Homepage quality checker package."""

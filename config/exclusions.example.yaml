@@ -1,0 +1,16 @@
+excluded_paths:
+  - "/admin"
+  - "/login"
+
+ignored_query_parameters:
+  - "utm_source"
+  - "utm_medium"
+  - "utm_campaign"
+  - "sessionid"
+
+excluded_checks:
+  - "image_source"
+  - "table_header_cell"
+  - "nonstandard_plugin"
+  - "robots_txt"
+

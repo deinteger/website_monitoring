@@ -1,0 +1,40 @@
+# 인수인계
+
+실제 운영시험 재개 명령: `python run_all.py --mode daily --target all --max-urls 10`
+사이트별 명령: `python run_all.py --mode daily --target nihhs --max-urls 10`,
+`python run_all.py --mode daily --target fruit --max-urls 10`.
+
+## 상태
+
+- E: 접속 방식 진단과 다중 transport mock 테스트 완료. 실제 10페이지 운영시험은 Codex 환경 차단으로 미완료이며 50페이지·전체 확대도 미완료다.
+- F: 자동 배치 fixture 통합 검증 완료.
+- G: localhost 대시보드 fixture 통합 및 실제 localhost 서버 검증 완료.
+- 외부 사이트에는 이번 작업에서 추가 요청하지 않았다.
+
+## F/G 완료 증거
+
+- 배치: `daily_batch.py`, `start_daily.bat`
+- 스케줄러: `register_daily_task.ps1`, `unregister_daily_task.ps1` (기본 dry-run은 등록 API 미호출)
+- 실행 잠금: `src/common/execution_lock.py`
+- 웹서버: `src/dashboard.py`; HTML/CSS/JS: `web/index.html`, `web/style.css`, `web/app.js`
+- 대시보드 문서: `docs/web-dashboard.md`; 시작 도구: `start_dashboard.bat`
+- 테스트: `tests/test_daily_batch.py`, `tests/test_dashboard.py`, `tests/test_dashboard_server.py`, `tests/test_execution_lock.py`, `tests/test_run_service.py`
+- 배치와 수동 실행은 raw fixture에서 동일 `DailyPipeline` inventory 정규화 결과를 생성하는지 검증했다.
+
+## 최신 검증
+
+- F/G 전용: 15 passed
+- 전체 수집: 195 collected
+- 전체 회귀: 195 passed
+- `python run_all.py --help`, `python daily_batch.py --help`, `python -m src.dashboard --help`: 성공
+- 실제 localhost server: `127.0.0.1:18765/api/health` → HTTP 200 / bind `127.0.0.1`
+- 포트 충돌: 자동 테스트에서 명확한 오류와 exit 1 확인
+- scheduler dry-run: 성공, 등록 없음
+
+## 실제 운영시험 재개 명령
+
+TCP 443이 가능한 일반 PowerShell 환경에서 아래처럼 **명시적으로 최대 10페이지**만 실행한다.
+
+`python run_all.py --mode daily --target all --max-urls 10`
+
+성공한 뒤에만 50페이지 및 전체 범위를 검토한다. SSL·방화벽·프록시 설정을 변경하거나 403/429/WAF/캡차를 우회하지 않는다.

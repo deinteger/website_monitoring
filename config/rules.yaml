@@ -1,0 +1,112 @@
+crawl:
+  user_agent: "NIHHS-QA-Bot/1.0 (+internal website quality check)"
+  concurrency: 1
+  request_interval_seconds: 1.0
+  timeout_seconds: 15
+  max_retries: 1
+  max_urls: 10
+  max_response_bytes: 20971520
+  browser_mode: "off"
+  discovery_sources:
+    - "main_menu"
+    - "all_menu"
+    - "sitemap"
+
+network:
+  transport: auto
+  proxy_mode: auto
+  proxy_url_env: WEBSITE_CHECKER_PROXY
+  browser_fallback: true
+
+freshness:
+  default_review_days: 730
+  future_tolerance_days: 1
+  list_latest_calendar_months: 3
+  list_latest_issue_type: "게시 최신성 지연"
+  archive_keywords:
+    - "연혁"
+    - "지난자료"
+    - "아카이브"
+  time_sensitive_keywords:
+    - "신청기간"
+    - "접수기간"
+    - "행사일"
+    - "마감"
+  date_labels:
+    published: ["게시일", "등록일", "작성일", "발행일"]
+    modified: ["수정일", "최종수정일", "변경일", "갱신일"]
+  content_type_patterns:
+    required: ["공지", "보도자료", "게시물", "news", "press", "article", "view"]
+    not_required: ["기관소개", "시설안내", "소개", "about", "guide", "history", "연혁", "지난자료", "아카이브"]
+  date_selectors: {}
+  list_calendar_months: 3
+  list_latest_issue_type: "게시 최신성 지연"
+  list_empty_phrases: ["게시물이 없습니다", "등록된 게시물이 없습니다", "검색 결과가 없습니다", "조회된 결과가 없습니다"]
+
+performance:
+  response_warning_seconds: 3.0
+  response_error_seconds: 5.0
+  page_size_warning_mb: 3.0
+  page_size_error_mb: 5.0
+  soft_404_keywords: ["페이지를 찾을 수 없습니다", "존재하지 않습니다", "오류가 발생했습니다"]
+  soft_404_min_body_bytes: 512
+  browser_mode: "off"
+  mixed_content: true
+
+redirects:
+  warning_hops: 3
+
+features:
+  llm_typo_check: false
+  playwright: false
+  search_portal_discovery: false
+
+dashboard:
+  port: 18765
+
+retention:
+  report_keep_days: 90
+
+resources:
+  max_requests: 10
+  timeout_seconds: 15
+  max_retries: 1
+  max_response_bytes: 20971520
+  max_redirect_hops: 3
+  check_external_links: true
+  check_image_alt: true
+  attachment_cache_enabled: true
+  attachment_recheck_days: 30
+  policy_version: "resources-1"
+  attachment_extensions: [".pdf", ".zip", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".hwp", ".hwpx"]
+  attachment_content_types: ["application/pdf", "application/zip", "application/octet-stream", "application/msword", "application/vnd.openxmlformats-officedocument"]
+
+accessibility:
+  enabled: true
+  policy_version: "accessibility-1"
+  cache_enabled: true
+  force_option: "--force-accessibility-check"
+  generic_title_keywords: ["홈", "페이지", "home", "untitled"]
+  allowed_langs: ["ko", "ko-KR", "en", "en-US"]
+  skip_link_keywords: ["본문 바로가기", "콘텐츠 바로가기", "skip to content"]
+  viewport_required: "width=device-width"
+  content_selector: "main, article, #content, .content"
+  volatile_selectors: [".view-count", ".current-time", ".session", ".csrf", ".nonce", ".ad", ".banner"]
+  volatile_attributes: ["nonce", "data-csrf-token", "data-session-id"]
+  volatile_patterns: ["(?i)조회수\\s*[:：]?\\s*\\d+", "(?i)csrf[^\\s<]*"]
+
+composite:
+  policy_version: "composite-1"
+  required_checks: ["connectivity", "content_basic", "resources", "accessibility", "response_info"]
+  optional_checks: ["console", "ai", "external_links"]
+  history_max_entries: 50
+
+coverage:
+  screenshots_enabled: false
+  policy_version: "screenshot-1"
+  capture_states: ["신규", "재발", "변경", "수동확인 필요"]
+  viewport: [1280, 900]
+  full_page: true
+  recapture_days: 30
+  max_captures: 20
+  force_option: "--force-screenshot"

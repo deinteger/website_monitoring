@@ -1,0 +1,24 @@
+excluded_paths:
+  - "/admin"
+  - "/login"
+
+ignored_query_parameters:
+  - "utm_source"
+  - "utm_medium"
+  - "utm_campaign"
+  - "sessionid"
+
+url_normalization:
+  trailing_slash: "preserve"
+  sort_query_parameters: false
+  excluded_schemes:
+    - "mailto"
+    - "tel"
+    - "javascript"
+    - "data"
+
+excluded_checks:
+  - "image_source"
+  - "table_header_cell"
+  - "nonstandard_plugin"
+  - "robots_txt"

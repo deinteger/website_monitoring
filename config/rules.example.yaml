@@ -1,0 +1,27 @@
+freshness:
+  default_review_days: 730
+  list_latest_calendar_months: 3
+  list_latest_issue_type: "게시 최신성 지연"
+  archive_keywords:
+    - "연혁"
+    - "지난자료"
+    - "아카이브"
+  time_sensitive_keywords:
+    - "신청기간"
+    - "접수기간"
+    - "행사일"
+    - "마감"
+
+performance:
+  response_warning_seconds: 3.0
+  response_error_seconds: 5.0
+  page_size_warning_mb: 3.0
+  page_size_error_mb: 5.0
+
+redirects:
+  warning_hops: 3
+
+features:
+  llm_typo_check: false
+  playwright: false
+  search_portal_discovery: false

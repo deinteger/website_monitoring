@@ -1,0 +1,27 @@
+targets:
+  nihhs:
+    name: "국립원예특작과학원"
+    base_url: "https://www.nihhs.go.kr"
+    menu:
+      main_selectors: ["nav a", "header a"]
+      all_menu_paths: []
+      all_menu_selectors: [".all-menu a", "#allMenu a"]
+      sitemap_path: "/sitemap.xml"
+    allowed_domains: []
+    date_selectors:
+      published: []
+      modified: []
+    list_selectors: {}
+  fruit:
+    name: "과수생육·품질관리시스템"
+    base_url: "https://fruit.nihhs.go.kr"
+    menu:
+      main_selectors: ["nav a", "header a"]
+      all_menu_paths: []
+      all_menu_selectors: [".all-menu a", "#allMenu a"]
+      sitemap_path: "/sitemap.xml"
+    allowed_domains: []
+    date_selectors:
+      published: []
+      modified: []
+    list_selectors: {}

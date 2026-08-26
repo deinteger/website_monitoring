@@ -1,0 +1,28 @@
+ai:
+  enabled: false
+  provider: "timely_openai_compatible"
+  base_url_env: "TIMELYGPT_BASE_URL"
+  api_key_env: "TIMELYGPT_API_KEY"
+  models_url_env: "TIMELYGPT_MODELS_URL"
+  model_env: "TIMELYGPT_MODEL"
+  allowed_hosts:
+    - "hello.timelygpt.co.kr"
+  timeout_seconds: 60
+  max_retries: 2
+  concurrency: 1
+  max_pages_per_run: 20
+  max_evidence_chars_per_page: 6000
+  cache_by_content_hash: true
+  send_attachments: false
+  enable_image_review: false
+
+chatbot:
+  enabled: false
+  cli: true
+  web: false
+  host: "127.0.0.1"
+  port: 8766
+  max_message_chars: 4000
+  max_context_records: 30
+  allow_run_check: true
+

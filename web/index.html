@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>NIHHS 일일 점검</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body><main><h1>NIHHS 일일 점검</h1><p>로컬 전용 · 외부 URL 및 명령 입력은 허용하지 않습니다.</p>
+<section><label>대상 <select id="target"><option value="all">전체</option><option value="nihhs">nihhs</option><option value="fruit">fruit</option></select></label><label>최대 페이지 <input id="max" type="number" min="1" max="10" value="10"></label><label><input id="forceResource" type="checkbox"> 자원 강제점검</label><label><input id="forceAccess" type="checkbox"> 접근성 강제점검</label><label><input id="forceScreenshot" type="checkbox"> 스크린샷 강제생성</label><button id="run">fixture 실행</button><button id="stop">중지 요청</button></section>
+<section><label>fixture JSON (로컬 테스트용)<textarea id="fixture">{"page_results":[],"coverage_summary":{}}</textarea></label></section>
+<section><h2>진행상태</h2><pre id="status">불러오는 중</pre></section><section><h2>결과</h2><pre id="results"></pre></section></main><script src="/assets/app.js"></script></body></html>

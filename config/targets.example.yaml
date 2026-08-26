@@ -1,0 +1,21 @@
+targets:
+  nihhs:
+    name: "국립원예특작과학원"
+    base_url: "https://www.nihhs.go.kr"
+  fruit:
+    name: "과수생육·품질관리시스템"
+    base_url: "https://fruit.nihhs.go.kr"
+
+crawl:
+  user_agent: "NIHHS-QA-Bot/1.0 (+internal website quality check)"
+  concurrency: 1
+  request_interval_seconds: 1.0
+  timeout_seconds: 15
+  max_retries: 1
+  max_urls: 10
+  max_response_bytes: 20971520
+  browser_mode: "off"
+  discovery_sources:
+    - "main_menu"
+    - "all_menu"
+    - "sitemap"
