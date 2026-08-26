@@ -132,10 +132,11 @@ def _blocked(response: FetchResponse) -> str | None:
 
 
 class InventoryCollector:
-    def __init__(self, target: Target, fetcher: Fetcher, *, max_requests: int = 10) -> None:
+    def __init__(self, target: Target, fetcher: Fetcher, *, max_requests: int = 10, include_root: bool = False) -> None:
         self.target = target
         self.fetcher = fetcher
         self.max_requests = max_requests
+        self.include_root = include_root
         self._responses: dict[str, FetchResponse] = {}
         self._errors: dict[str, FetchError] = {}
         self._visited_sitemaps: set[str] = set()
@@ -252,6 +253,8 @@ class InventoryCollector:
         menu = self.target.menu
         main_url = self.target.base_url + "/"
         main = self._run_page_source("main_menu", main_url, list(menu.get("main_selectors", [])))
+        if self.include_root and main.success:
+            self._add("root", main_url, main_url, self.target.name, "")
         self._parse_all_menu(main_url, menu, main)
         sitemap = SourceResult("sitemap")
         sitemap_path = str(menu.get("sitemap_path", "/sitemap.xml"))
