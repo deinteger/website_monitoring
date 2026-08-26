@@ -55,7 +55,7 @@ class DailyRunService:
     def request_stop(self):
         with self._guard:
             if self.status.get("status") != "running": return False
-            self._cancel=True; self.status["stop_requested"]=True; self.status["stage"]="stop_requested"; return True
+            self._cancel=True; self.status["stop_requested"]=True; self.status["stage"]="stop_requested"; self.status["status"]="stop_requested"; return True
 
     def _run(self, fixture, transport, run_id, mode):
         lock=ExecutionLock(self.state_dir)
@@ -65,6 +65,9 @@ class DailyRunService:
                 if self._cancel: self.status.update(status="cancelled",stage="cancelled",progress=100); return
                 self.status.update(stage="pipeline",progress=10)
             pipeline=DailyPipeline(state_dir=self.state_dir,output_root=self.output_root)
+            if self._cancel:
+                with self._guard: self.status.update(status="cancelled",stage="cancelled",progress=100,ended_at=datetime.now(timezone.utc).isoformat())
+                return
             if fixture is not None:
                 result=pipeline.run_raw_fixture(fixture,run_id=run_id) if fixture.get("responses") else pipeline.run_offline(fixture,run_id=run_id)
             else:
@@ -72,7 +75,11 @@ class DailyRunService:
                 result=adapter.run_full(pipeline,run_id) if fixture is None else pipeline.run_with_transport(adapter,run_id=run_id,transport_name=getattr(transport,"name","auto"))
             result.setdefault("exit_code", 0 if result.get("status") == "completed" else 2)
             public={k:v for k,v in result.items() if k in {"run_id","status","exit_code","report_path","execution_stages"}}
-            with self._guard: self.status.update(public,status="completed" if result.get("exit_code")==0 else "partial_failed",stage="finished",progress=100,ended_at=datetime.now(timezone.utc).isoformat(),processed_count=len((fixture or {}).get("page_results",[])))
+            with self._guard:
+                if self._cancel:
+                    self.status.update(status="cancelled",stage="cancelled",progress=100,ended_at=datetime.now(timezone.utc).isoformat())
+                else:
+                    self.status.update(public,status="completed" if result.get("exit_code")==0 else "partial_failed",stage="finished",progress=100,ended_at=datetime.now(timezone.utc).isoformat(),processed_count=len((fixture or {}).get("page_results",[])))
         except ExecutionLockedError as exc:
             with self._guard: self.status.update(status="blocked",stage="lock",failure_count=1,failure_reason=str(exc),progress=100)
         except Exception:
