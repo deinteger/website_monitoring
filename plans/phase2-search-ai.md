@@ -35,4 +35,7 @@
 - [ ] 전체 배치 오케스트레이터와 부분실패 처리
 - [ ] Windows 작업 스케줄러 가이드
 - [ ] 연속 2회 실행으로 전일 비교·latest 갱신 검증
+# H. TimelyGPT 점검결과 분석 챗봇
 
+- [x] 로컬 AI API·컨텍스트 제한·mock 테스트 기반 구현
+- [ ] 실제 TimelyGPT 연결시험(사용자 PowerShell에서 API 키 설정 후 수행)

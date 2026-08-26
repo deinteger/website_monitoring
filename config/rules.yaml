@@ -64,6 +64,15 @@ features:
 dashboard:
   port: 18765
 
+ai:
+  enabled: false
+  provider: timelygpt
+  model: ""
+  max_context_items: 30
+  max_context_chars: 30000
+  max_history_messages: 10
+  request_timeout_seconds: 60
+
 retention:
   report_keep_days: 90
 

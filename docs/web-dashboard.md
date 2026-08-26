@@ -14,6 +14,7 @@
 - `GET /api/history`, `/api/reports`
 - `POST /api/run` — `target`, `max_urls`, 세 가지 강제점검 옵션만 허용
 - `POST /api/stop`
+- `GET /api/ai/status`, `/api/ai/models`; `POST /api/ai/chat`, `/api/ai/clear`
 - `GET /download/<상대 XLSX 경로>`, `GET /screenshot/<상대 PNG 경로>`
 
 다운로드와 스크린샷은 허용된 루트 안의 파일만 제공하며 경로 순회를 차단한다. API 오류와 실행 상태는 민감한 traceback이나 절대경로를 노출하지 않는다.
@@ -25,3 +26,7 @@ python -m src.dashboard
 ```
 
 브라우저를 열려면 `start_dashboard.bat`을 사용한다. 외부 사이트 요청 없는 화면·API 검증은 fixture transport를 주입한 테스트로 수행한다.
+
+## AI 점검 도우미
+
+TimelyGPT 기능은 `config/rules.yaml`의 `ai.enabled`가 `true`이고 `TIMELYGPT_API_KEY`가 설정된 경우에만 활성화된다. 브라우저에는 키를 전달하지 않으며, 서버가 허용된 TimelyGPT 주소로만 호출한다. 질문과 필터에 맞는 결과만 최대 건수·문자 수로 잘라 컨텍스트에 넣고, 답변에는 URL·issue key·점검일 근거를 반환한다. 키가 없거나 TimelyGPT가 실패해도 점검·배치·XLSX는 영향을 받지 않는다.

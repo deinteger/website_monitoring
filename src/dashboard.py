@@ -10,6 +10,7 @@ from src.common.state_manager import StateManager
 from src.daily_pipeline import DailyPipeline
 from src.common.run_service import DailyRunService
 from src.common.http_transport import build_transport
+from src.ai_assistant import AIAssistant
 
 WEB_ROOT=Path(__file__).resolve().parent.parent / "web"
 
@@ -34,6 +35,8 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
         cfg=yaml.safe_load((Path(config_dir)/"rules.yaml").read_text(encoding="utf-8")) or {}
         crawl=cfg.get("crawl",{}); network=cfg.get("network",{})
         transport_factory=lambda: build_transport(network,user_agent=crawl.get("user_agent","NIHHS-QA-Bot/1.0"),timeout=crawl.get("timeout_seconds",15),max_retries=crawl.get("max_retries",1),interval=crawl.get("request_interval_seconds",1),max_requests=crawl.get("max_urls",10))
+    cfg=yaml.safe_load((Path(config_dir)/"rules.yaml").read_text(encoding="utf-8")) or {}
+    assistant=AIAssistant(state_dir,cfg.get("ai",{}))
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
         def send_json(self, value, status=200):
@@ -45,6 +48,8 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
             if parsed.path == "/assets/app.js": return self._asset("app.js", "application/javascript; charset=utf-8")
             state=StateManager(state_dir)
             if parsed.path == "/api/health": return self.send_json({"ok":True,"bind":"127.0.0.1"})
+            if parsed.path == "/api/ai/status": return self.send_json(assistant.status())
+            if parsed.path == "/api/ai/models": return self.send_json({"models":assistant.models(),"configured":bool(assistant.model)})
             if parsed.path == "/api/status":
                 current=service.snapshot()
                 return self.send_json(current if current.get("status") != "idle" else state.load_json("inventory.json", {}).get("run_metadata", {}))
@@ -84,6 +89,14 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
         def do_POST(self):
             endpoint=urlparse(self.path).path
             if endpoint == "/api/stop": return self.send_json({"accepted":service.request_stop()})
+            if endpoint == "/api/ai/clear": return self.send_json({"cleared":True})
+            if endpoint == "/api/ai/chat":
+                try: body=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
+                except (ValueError,UnicodeDecodeError): return self.send_json({"error":"요청 형식이 올바르지 않습니다."},400)
+                if set(body)-{"question","history","filters"} or not isinstance(body.get("question"),str): return self.send_json({"error":"질문 요청이 올바르지 않습니다."},400)
+                try: return self.send_json(assistant.chat(body["question"],body.get("history"),body.get("filters")))
+                except ValueError as exc: return self.send_json({"error":str(exc)},400)
+                except Exception as exc: return self.send_json({"error":str(exc)},502)
             if endpoint != "/api/run": return self.send_json({"error":"not found"},404)
             try: body=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
             except (ValueError, UnicodeDecodeError): return self.send_json({"error":"invalid JSON"},400)

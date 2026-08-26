@@ -42,6 +42,14 @@
 - 시각 검증: localhost에서 Playwright 1366×768 및 390×844 캡처·확인
 - 외부 사이트 요청: 0회
 
+## H TimelyGPT AI 점검 도우미
+
+- `src/ai_assistant.py`와 `/api/ai/status`, `/api/ai/models`, `/api/ai/chat`, `/api/ai/clear` 구현
+- `TIMELYGPT_API_KEY`는 서버 환경변수에서만 읽고 기본 AI 기능은 비활성화
+- 질문 관련 결과만 최대 건수·문자 수로 선택하며 URL·issue key·점검일 근거를 반환
+- TimelyGPT 외부 호출: 0회(mock client만 사용)
+- H 전용 테스트: 4개
+
 ## 실제 운영시험 재개 명령
 
 TCP 443이 가능한 일반 PowerShell 환경에서 아래처럼 **명시적으로 최대 10페이지**만 실행한다.
