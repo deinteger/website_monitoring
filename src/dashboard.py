@@ -54,7 +54,15 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
             if parsed.path == "/api/ai/models": return self.send_json({"models":assistant.models(),"selected_model":assistant.model,"configured":bool(assistant.model)})
             if parsed.path == "/api/status":
                 current=service.snapshot()
-                return self.send_json(current if current.get("status") != "idle" else state.load_json("inventory.json", {}).get("run_metadata", {}))
+                if current.get("status") != "idle": return self.send_json(current)
+                metadata=state.load_json("inventory.json", {}).get("run_metadata", {})
+                history_path=Path(state_dir)/"run_history.jsonl"
+                if history_path.exists():
+                    try:
+                        last=json.loads(history_path.read_text(encoding="utf-8").splitlines()[-1])
+                        metadata={**metadata,"status":last.get("status","completed"),"ended_at":last.get("ended_at") or last.get("recorded_at")}
+                    except (ValueError,IndexError): pass
+                return self.send_json(metadata)
             if parsed.path == "/api/history":
                 p=Path(state_dir)/"run_history.jsonl"; rows=[json.loads(x) for x in p.read_text(encoding="utf-8").splitlines()] if p.exists() else []
                 return self.send_json(rows[-50:])
