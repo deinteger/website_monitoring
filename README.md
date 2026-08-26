@@ -32,6 +32,15 @@ TimelyGPT 기반 AI 보조점검·결과 질의응답을 제공하는 로컬 Pyt
 3. 전자정부 공식 품질진단 확장
 
 현재 작업은 `PLAN.md`와 `HANDOVER.md`를 확인한다.
+
+## 현재 상태
+
+- F 자동 배치: 완료
+- G 웹 대시보드: 완료
+- E 실제 10페이지 운영시험: Codex 실행 환경 네트워크 차단으로 미완료
+- 다음 작업: 접속 가능한 일반 PowerShell에서 실제 사이트별 10페이지 시험
+
+실행 예: `python run_all.py --mode daily --target all --max-urls 10`
 # 10페이지 실제 운영시험 재개 명령
 
 전체 사이트:
