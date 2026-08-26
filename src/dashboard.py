@@ -3,7 +3,7 @@ from __future__ import annotations
 import json, socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 import yaml
 from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.common.state_manager import StateManager
@@ -88,11 +88,11 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
                 key=parsed.path.rsplit("/",1)[-1]; issues=state.load_json("issues.json",{}); pages=issues.get("page_results",[]) if isinstance(issues,dict) else []
                 return self.send_json(next((x for x in pages if str(x.get("issue_key"))==key or str(x.get("url"))==key),{}))
             if parsed.path.startswith("/download/"):
-                file=safe_report(output_root, parsed.path.removeprefix("/download/"))
+                file=safe_report(output_root, unquote(parsed.path.removeprefix("/download/")))
                 if not file: return self.send_json({"error":"not found"},404)
                 raw=file.read_bytes(); self.send_response(200); self.send_header("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw); return
             if parsed.path.startswith("/screenshot/"):
-                file=safe_screenshot("screenshots",parsed.path.removeprefix("/screenshot/"))
+                file=safe_screenshot("screenshots",unquote(parsed.path.removeprefix("/screenshot/")))
                 if not file: return self.send_json({"error":"not found"},404)
                 raw=file.read_bytes(); self.send_response(200); self.send_header("Content-Type","image/png"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw); return
             self.send_json({"error":"not found"},404)
