@@ -8,7 +8,7 @@
 
 - E: 접속 방식 진단과 다중 transport mock 테스트 완료. 실제 10페이지 운영시험은 Codex 환경 차단으로 미완료이며 50페이지·전체 확대도 미완료다.
 - F: 자동 배치 fixture 통합 검증 완료.
-- G: localhost 대시보드 fixture 통합 및 실제 localhost 서버 검증 완료.
+- G: 운영용 HTML 대시보드·구조화 API·fixture 주입 통합 및 실제 localhost 서버 검증 완료. 운영 화면에는 fixture 입력과 원시 JSON 출력이 없다.
 - 외부 사이트에는 이번 작업에서 추가 요청하지 않았다.
 
 ## F/G 완료 증거
@@ -30,6 +30,17 @@
 - 실제 localhost server: `127.0.0.1:18765/api/health` → HTTP 200 / bind `127.0.0.1`
 - 포트 충돌: 자동 테스트에서 명확한 오류와 exit 1 확인
 - scheduler dry-run: 성공, 등록 없음
+
+## G 운영 화면 보완 검증
+
+- 운영 화면: `web/index.html`, `web/style.css`, `web/app.js`
+- API: health, status, summary, results(필터·정렬·페이지네이션), 상세, history, reports, run, stop
+- 수동 실행: 허용된 대상·최대 10페이지·강제점검 옵션만 받고 공통 `DailyPipeline`·실행 잠금을 사용한다.
+- fixture: `make_handler(..., allow_fixture=True)` 의존성 주입 테스트에서만 허용한다.
+- 전용 대시보드 테스트: 13 passed
+- 전체 회귀: 199 passed
+- 시각 검증: localhost에서 Playwright 1366×768 및 390×844 캡처·확인
+- 외부 사이트 요청: 0회
 
 ## 실제 운영시험 재개 명령
 

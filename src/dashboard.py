@@ -9,6 +9,7 @@ from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.common.state_manager import StateManager
 from src.daily_pipeline import DailyPipeline
 from src.common.run_service import DailyRunService
+from src.common.http_transport import build_transport
 
 WEB_ROOT=Path(__file__).resolve().parent.parent / "web"
 
@@ -27,8 +28,12 @@ def safe_screenshot(root, name):
     path=(Path(root)/name).resolve(); base=Path(root).resolve()
     return path if path.suffix.lower()==".png" and base in path.parents and path.is_file() else None
 
-def make_handler(state_dir="state", output_root="output"):
+def make_handler(state_dir="state", output_root="output", *, allow_fixture=False, transport_factory=None, config_dir="config"):
     service=DailyRunService(state_dir, output_root)
+    if transport_factory is None:
+        cfg=yaml.safe_load((Path(config_dir)/"rules.yaml").read_text(encoding="utf-8")) or {}
+        crawl=cfg.get("crawl",{}); network=cfg.get("network",{})
+        transport_factory=lambda: build_transport(network,user_agent=crawl.get("user_agent","NIHHS-QA-Bot/1.0"),timeout=crawl.get("timeout_seconds",15),max_retries=crawl.get("max_retries",1),interval=crawl.get("request_interval_seconds",1),max_requests=crawl.get("max_urls",10))
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
         def send_json(self, value, status=200):
@@ -51,12 +56,22 @@ def make_handler(state_dir="state", output_root="output"):
                 issues=state.load_json("issues.json", {}); inventory=state.load_json("inventory.json", {})
                 pages=issues.get("page_results", []) if isinstance(issues,dict) else []
                 query=parse_qs(parsed.query)
-                for field in ("target_id","verdict","menu_path"):
+                for field in ("target_id","verdict","menu_path","issue_type","lifecycle"):
                     if query.get(field): pages=[x for x in pages if str(x.get(field,""))==query[field][0]]
                 if query.get("q"):
                     needle=query["q"][0].lower(); pages=[x for x in pages if needle in str(x.get("url","")).lower()]
+                sort=query.get("sort",["url"])[0]; allowed_sort={"url","target_id","verdict","menu_path","title","status_code"}
+                if sort in allowed_sort: pages=sorted(pages,key=lambda x:str(x.get(sort,"")))
+                page=max(1,int(query.get("page",[1])[0])); size=min(100,max(1,int(query.get("page_size",[25])[0]))); total=len(pages)
                 verdicts={k:sum(x.get("verdict")==k for x in pages) for k in ("정상","검토 필요","오류","점검 불가","제외")}
-                return self.send_json({"verdicts":verdicts,"pages":pages,"active_issues":len(issues.get("active_issues",[])) if isinstance(issues,dict) else 0,"inventory":inventory})
+                lifecycle_counts={k:sum(x.get("lifecycle")==k for x in pages) for k in ("신규","지속","변경","해결","재발")}
+                return self.send_json({"verdicts":verdicts,"lifecycle":lifecycle_counts,"pages":pages[(page-1)*size:page*size],"total":total,"page":page,"page_size":size,"active_issues":len(issues.get("active_issues",[])) if isinstance(issues,dict) else 0,"inventory":inventory})
+            if parsed.path == "/api/summary":
+                issues=state.load_json("issues.json", {}); pages=issues.get("page_results",[]) if isinstance(issues,dict) else []
+                return self.send_json({"total":len(pages),"verdicts":{k:sum(x.get("verdict")==k for x in pages) for k in ("정상","검토 필요","오류","점검 불가","제외")},"lifecycle":{k:sum(x.get("lifecycle")==k for x in pages) for k in ("신규","지속","변경","해결","재발")}})
+            if parsed.path.startswith("/api/results/"):
+                key=parsed.path.rsplit("/",1)[-1]; issues=state.load_json("issues.json",{}); pages=issues.get("page_results",[]) if isinstance(issues,dict) else []
+                return self.send_json(next((x for x in pages if str(x.get("issue_key"))==key or str(x.get("url"))==key),{}))
             if parsed.path.startswith("/download/"):
                 file=safe_report(output_root, parsed.path.removeprefix("/download/"))
                 if not file: return self.send_json({"error":"not found"},404)
@@ -72,10 +87,14 @@ def make_handler(state_dir="state", output_root="output"):
             if endpoint != "/api/run": return self.send_json({"error":"not found"},404)
             try: body=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
             except (ValueError, UnicodeDecodeError): return self.send_json({"error":"invalid JSON"},400)
-            allowed={"target","max_urls","fixture","force_resource","force_accessibility","force_screenshot"}
-            if set(body)-allowed or body.get("target","all") not in {"all","nihhs","fruit"} or not isinstance(body.get("max_urls",10),int) or not 1 <= body.get("max_urls",10) <= 10 or not isinstance(body.get("fixture"),dict) or any(not isinstance(body.get(k,False),bool) for k in allowed-{"target","max_urls","fixture"}): return self.send_json({"error":"invalid request"},400)
+            allowed={"target","max_urls","force_resource","force_accessibility","force_screenshot"}
+            if allow_fixture: allowed.add("fixture")
+            bool_keys={"force_resource","force_accessibility","force_screenshot"}
+            if set(body)-allowed or body.get("target","all") not in {"all","nihhs","fruit"} or not isinstance(body.get("max_urls",10),int) or not 1 <= body.get("max_urls",10) <= 10 or any(not isinstance(body.get(k,False),bool) for k in bool_keys): return self.send_json({"error":"invalid request"},400)
             try:
-                result=service.start_fixture(body["fixture"],mode="manual",target=body.get("target","all"),max_urls=body.get("max_urls",10),force_resource=body.get("force_resource",False),force_accessibility=body.get("force_accessibility",False),force_screenshot=body.get("force_screenshot",False))
+                kwargs=dict(mode="manual",target=body.get("target","all"),max_urls=body.get("max_urls",10),force_resource=body.get("force_resource",False),force_accessibility=body.get("force_accessibility",False),force_screenshot=body.get("force_screenshot",False),transport=(transport_factory() if transport_factory else build_transport({})))
+                if allow_fixture and isinstance(body.get("fixture"),dict): kwargs["fixture"]=body["fixture"]
+                result=service.start(**kwargs)
             except ExecutionLockedError as exc: return self.send_json({"error":str(exc)},409)
             self.send_json(result, 202)
         def _asset(self, name, content_type):
