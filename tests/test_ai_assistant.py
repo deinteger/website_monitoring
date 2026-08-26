@@ -1,7 +1,13 @@
 import json
+import pytest
 from io import BytesIO
 from src.ai_assistant import AIAssistant, AIConfigError, ResultContext, TimelyGPTClient
 from src.dashboard import make_handler
+
+@pytest.fixture(autouse=True)
+def ai_enabled_for_tests(monkeypatch):
+    monkeypatch.setenv("TIMELYGPT_ENABLED","true")
+    monkeypatch.setenv("TIMELYGPT_MODEL","mock-text")
 
 class MockClient:
     def __init__(self): self.calls=[]

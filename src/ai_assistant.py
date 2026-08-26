@@ -6,15 +6,17 @@ from typing import Any
 import requests
 
 TIMELY_BASE="https://hello.timelygpt.co.kr/api/v2/chat/bridge"
+TIMELY_OPENAI=f"{TIMELY_BASE}/openai"
+TIMELY_MODELS=f"{TIMELY_BASE}/info/models"
 ALLOWED_ENDPOINTS={f"{TIMELY_BASE}/openai",f"{TIMELY_BASE}/info/models"}
 SAFE_ERRORS={401:"인증에 실패했습니다.",402:"사용 가능한 크레딧이 없습니다.",429:"요청이 제한되었습니다."}
 
 class AIConfigError(ValueError): pass
 
 class TimelyGPTClient:
-    def __init__(self, *, api_key=None, base_url=TIMELY_BASE, models_url=None, model="", timeout=60, session=None):
-        self.api_key=api_key or os.environ.get("TIMELYGPT_API_KEY",""); self.base_url=base_url.rstrip("/"); self.models_url=(models_url or f"{self.base_url}/info/models").rstrip("/"); self.model=model or os.environ.get("TIMELYGPT_MODEL",""); self.timeout=timeout; self.session=session or requests.Session()
-        if self.base_url != TIMELY_BASE or self.models_url != f"{TIMELY_BASE}/info/models": raise AIConfigError("허용되지 않은 AI API 주소입니다.")
+    def __init__(self, *, api_key=None, base_url=TIMELY_OPENAI, models_url=None, model="", timeout=60, session=None):
+        self.api_key=api_key or os.environ.get("TIMELYGPT_API_KEY",""); self.base_url=base_url.rstrip("/"); self.models_url=(models_url or TIMELY_MODELS).rstrip("/"); self.model=model or os.environ.get("TIMELYGPT_MODEL",""); self.timeout=timeout; self.session=session or requests.Session()
+        if self.base_url != TIMELY_OPENAI or self.models_url != TIMELY_MODELS: raise AIConfigError("허용되지 않은 AI API 주소입니다.")
     def _headers(self): return {"Authorization":f"Bearer {self.api_key}","Content-Type":"application/json"}
     def models(self):
         try:
@@ -26,7 +28,7 @@ class TimelyGPTClient:
     def chat(self, messages, *, model=None):
         if not self.api_key: raise AIConfigError("TIMELYGPT_API_KEY가 설정되지 않았습니다.")
         try:
-            r=self.session.post(f"{self.base_url}/openai",headers=self._headers(),json={"model":model or self.model,"messages":messages},timeout=self.timeout); r.raise_for_status(); data=r.json()
+            r=self.session.post(self.base_url,headers=self._headers(),json={"model":model or self.model,"messages":messages},timeout=self.timeout); r.raise_for_status(); data=r.json()
             answer=((data.get("choices") or [{}])[0].get("message") or {}).get("content")
             if not isinstance(answer,str): raise RuntimeError("AI 응답 형식을 해석할 수 없습니다.")
             return answer
@@ -51,7 +53,7 @@ class ResultContext:
 
 class AIAssistant:
     def __init__(self,state_dir="state",config=None,client=None):
-        cfg=config or {}; env_enabled=os.environ.get("TIMELYGPT_ENABLED"); self.enabled=(env_enabled.lower() in {"1","true","yes","on"}) if env_enabled is not None else bool(cfg.get("enabled",False)); self.model=os.environ.get("TIMELYGPT_MODEL","") or cfg.get("model",""); self.max_history=int(cfg.get("max_history_messages",10)); self.context=ResultContext(state_dir,max_items=int(cfg.get("max_context_items",30)),max_chars=int(cfg.get("max_context_chars",30000))); self.client=client or TimelyGPTClient(api_key=os.environ.get("TIMELYGPT_API_KEY"),base_url=os.environ.get("TIMELYGPT_BASE_URL",TIMELY_BASE),models_url=os.environ.get("TIMELYGPT_MODELS_URL"),model=self.model,timeout=int(cfg.get("request_timeout_seconds",60))); self.last_result="disabled"; self._models=[]; self._models_at=0
+        cfg=config or {}; env_enabled=os.environ.get("TIMELYGPT_ENABLED"); self.enabled=(env_enabled.lower() in {"1","true","yes","on"}) if env_enabled is not None else bool(cfg.get("enabled",False)); self.model=os.environ.get("TIMELYGPT_MODEL","") or cfg.get("model",""); self.max_history=int(cfg.get("max_history_messages",10)); self.context=ResultContext(state_dir,max_items=int(cfg.get("max_context_items",30)),max_chars=int(cfg.get("max_context_chars",30000))); self.client=client or TimelyGPTClient(api_key=os.environ.get("TIMELYGPT_API_KEY"),base_url=os.environ.get("TIMELYGPT_BASE_URL",TIMELY_OPENAI),models_url=os.environ.get("TIMELYGPT_MODELS_URL"),model=self.model,timeout=int(cfg.get("request_timeout_seconds",60))); self.last_result="disabled"; self._models=[]; self._models_at=0
     def status(self): return {"enabled":self.enabled,"api_key_configured":bool(os.environ.get("TIMELYGPT_API_KEY")),"model":self.model,"last_result":self.last_result}
     def models(self):
         if time.time()-self._models_at<300: return self._models
