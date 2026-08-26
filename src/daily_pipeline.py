@@ -148,7 +148,13 @@ class DailyPipeline:
                     if body.startswith(b"%PDF-"): self.signature_checks += 1
                 return ResourceResponse(int(v.get("status_code",200)), v.get("headers",{}), body, url, (), None)
         resource_client=ResourceFixtureClient(); resource_checker=ResourceChecker(resource_client,target_base_url=base_url,attachment_cache=attachment_cache)
-        inventory = InventoryCollector(raw_target, fetcher, max_requests=int(fixture.get("max_requests", 10))).collect()
+        inventory = InventoryCollector(
+            raw_target,
+            fetcher,
+            max_requests=int(fixture.get("max_requests", 10)),
+            include_root=bool(fixture.get("include_root", False)),
+            crawl_internal=bool(fixture.get("crawl_internal", False)),
+        ).collect()
         normalized = merge_occurrences(inventory.records, target_id=target_id, base_url=base_url, policy=policy_from_config({}))
         current = {"raw":inventory.to_dict(), "normalized":normalized.to_dict()}; previous = self.state.load_json("inventory_baseline.json", {}).get(target_id)
         comparison = compare_inventory(previous, current, target_id=target_id, max_requests=int(fixture.get("max_requests", 10)))
@@ -202,11 +208,11 @@ class DailyPipeline:
         coverage=build_coverage([{"normalized_url":x.normalized_url,"classification":"internal"} for x in normalized.records], [x.__dict__ for x in inventory.sources], [{"status":"정상","required":True} for _ in checks])
         lifecycle_rows = [dict(x) for bucket in ("active_issues", "resolved_issues") for x in lifecycle.get(bucket, [])]
         payload={"page_results":html_results,"freshness_results":freshness,"resource_results":resources,"accessibility_issues":accessibility,"performance_results":performance,"coverage_records":coverage.get("missing_scope",[]) + lifecycle_rows,"site_stats":site_stats(html_results),"missing_scope":coverage.get("missing_scope",[]),"run_metadata":{"run_id":run_id}}
-        result=self.report.save(payload,date=date); self.state.save_json("inventory.json",{target_id:current});
+        result=self.report.save(payload,date=date); self.state.save_json("inventory.json",{target_id:current}); self.state.save_json("site_map.json",{"run_id":run_id,"target_id":target_id,"urls":[x.get("url") for x in html_results],"generated_at":datetime.now(timezone.utc).isoformat()});
         if comparison.baseline_updated: self.state.save_json("inventory_baseline.json",{target_id:current})
         for x in html_results:
             u=x.get("url", ""); hash_cache[u] = {"content_hash":build_content_hash(responses.get(u,{}).get("html", "")), "last_checked_at":datetime.now(timezone.utc).isoformat(), "cache_used": bool(old_hashes.get(u))}
-        attachment_cache.save_state(self.state); self.state.save_json("issues.json",lifecycle); self.state.save_json("content_hashes.json",hash_cache)
+        attachment_cache.save_state(self.state); self.state.save_json("issues.json",{**lifecycle,"page_results":html_results,"run_metadata":{"run_id":run_id,"target_id":target_id}}); self.state.save_json("content_hashes.json",hash_cache)
         self.last_metrics = {"accessibility_runs": accessibility_runs, "attachment_reuses": attachment_reuses, "attachment_downloads": attachment_downloads, "cache_hash_reuses": sum(1 for x in hash_cache.values() if x.get("cache_used")), "resource_calls":resource_client.calls, "signature_checks":resource_client.signature_checks, "download_bytes":resource_client.download_bytes}
         self.state.append_run_history({"run_id":run_id,"mode":"daily","status":"completed","external_requests":0,"request_count":fetcher.request_count})
         return {"run_id":run_id,"status":"completed","report_path":str(result),"inventory":inventory,"comparison":comparison,"lifecycle":lifecycle}

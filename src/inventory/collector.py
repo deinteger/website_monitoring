@@ -254,9 +254,9 @@ class InventoryCollector:
         menu = self.target.menu
         main_url = self.target.base_url + "/"
         main = self._run_page_source("main_menu", main_url, list(menu.get("main_selectors", [])))
-        if self.include_root and main.success:
+        if self.include_root:
             self._add("root", main_url, main_url, self.target.name, "")
-            if self.crawl_internal:
+            if self.crawl_internal and main_url in self._responses:
                 self._parse_menu("crawl", main_url, self._responses[main_url].text, ["a"], main)
                 queue=list(self._records)
                 seen={main_url}

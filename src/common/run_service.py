@@ -28,9 +28,12 @@ class OperationalPayload:
             fetcher=RequestFetcher(user_agent=config.crawl.user_agent,timeout=config.crawl.timeout_seconds,max_retries=config.crawl.max_retries,interval=config.crawl.request_interval_seconds,max_requests=self.max_urls,transport=self.transport)
             inventory=InventoryCollector(target,fetcher,max_requests=self.max_urls,include_root=True,crawl_internal=True).collect()
             for record in inventory.records[:self.max_urls]:
-                url=getattr(record,"normalized_url",None) or next(iter(getattr(record,"original_urls",()) or (target.base_url,)))
+                # InventoryCollector returns DiscoveryOccurrence objects.  Keep
+                # the discovered URL (including links found while crawling),
+                # rather than silently falling back to the homepage.
+                url=getattr(record,"url",None) or target.base_url
                 response=self.transport.fetch(url); responses[url]={"status_code":response.status_code,"html":response.text,"elapsed_seconds":response.elapsed_seconds,"headers":response.headers}
-        return pipeline.run_raw_fixture({"responses":responses,"max_requests":self.max_urls},target_id=targets[0],base_url=config.targets[targets[0]].base_url,run_id=run_id)
+        return pipeline.run_raw_fixture({"responses":responses,"max_requests":self.max_urls,"include_root":True,"crawl_internal":True},target_id=targets[0],base_url=config.targets[targets[0]].base_url,run_id=run_id)
 
 class DailyRunService:
     def __init__(self, state_dir="state", output_root="output"):

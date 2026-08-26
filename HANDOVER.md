@@ -6,6 +6,13 @@
 
 ## 상태
 
+### 사이트맵 없는 실제 점검 보완 (2026-08-26)
+
+- 운영 수동 점검이 `DailyPipeline` 앞단에서 대표 페이지를 먼저 요청하고, 사이트맵이 없거나 비어 있어도 동일 도메인 내부 `<a href>` 링크를 순차적으로 따라가 인벤토리를 만든다.
+- 최대 URL 수는 기존 안전 제한(10)을 그대로 공유하며, 발견된 URL별 응답을 공통 raw fixture 경로로 전달해 JSON·XLSX·이슈 상태를 생성한다.
+- fixture 검증 `tests/test_dashboard_operational.py` 7개, 전체 회귀 `223 passed`.
+- 이 환경의 실제 HTTPS 요청은 프록시·직접 HTTP·브라우저 transport 모두 차단되어 운영 결과 생성까지 도달하지 못했다. 일반 PowerShell에서 다음 명령으로 재개한다: `python run_all.py --mode daily --target fruit --max-urls 10`.
+
 - E: 접속 방식 진단과 다중 transport mock 테스트 완료. 실제 10페이지 운영시험은 Codex 환경 차단으로 미완료이며 50페이지·전체 확대도 미완료다.
 - F: 자동 배치 fixture 통합 검증 완료.
 - G: 운영용 HTML 대시보드·구조화 API·fixture 주입 통합 및 실제 localhost 서버 검증 완료. 운영 화면에는 fixture 입력과 원시 JSON 출력이 없다.
