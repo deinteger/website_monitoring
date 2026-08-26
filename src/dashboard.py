@@ -49,7 +49,7 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
             state=StateManager(state_dir)
             if parsed.path == "/api/health": return self.send_json({"ok":True,"bind":"127.0.0.1"})
             if parsed.path == "/api/ai/status": return self.send_json(assistant.status())
-            if parsed.path == "/api/ai/models": return self.send_json({"models":assistant.models(),"configured":bool(assistant.model)})
+            if parsed.path == "/api/ai/models": return self.send_json({"models":assistant.models(),"selected_model":assistant.model,"configured":bool(assistant.model)})
             if parsed.path == "/api/status":
                 current=service.snapshot()
                 return self.send_json(current if current.get("status") != "idle" else state.load_json("inventory.json", {}).get("run_metadata", {}))
@@ -93,8 +93,8 @@ def make_handler(state_dir="state", output_root="output", *, allow_fixture=False
             if endpoint == "/api/ai/chat":
                 try: body=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
                 except (ValueError,UnicodeDecodeError): return self.send_json({"error":"요청 형식이 올바르지 않습니다."},400)
-                if set(body)-{"question","history","filters"} or not isinstance(body.get("question"),str): return self.send_json({"error":"질문 요청이 올바르지 않습니다."},400)
-                try: return self.send_json(assistant.chat(body["question"],body.get("history"),body.get("filters")))
+                if set(body)-{"question","history","filters","model"} or not isinstance(body.get("question"),str) or ("model" in body and not isinstance(body.get("model"),str)): return self.send_json({"error":"질문 요청이 올바르지 않습니다."},400)
+                try: return self.send_json(assistant.chat(body["question"],body.get("history"),body.get("filters"),body.get("model")))
                 except ValueError as exc: return self.send_json({"error":str(exc)},400)
                 except Exception as exc: return self.send_json({"error":str(exc)},502)
             if endpoint != "/api/run": return self.send_json({"error":"not found"},404)
