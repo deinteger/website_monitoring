@@ -47,4 +47,10 @@ class DailyRunService:
             with self._guard: self.status.update(public,status="completed" if result.get("exit_code")==0 else "partial_failed",stage="finished",progress=100,ended_at=datetime.now(timezone.utc).isoformat(),processed_count=len((fixture or {}).get("page_results",[])))
         except ExecutionLockedError as exc:
             with self._guard: self.status.update(status="blocked",stage="lock",failure_count=1,failure_reason=str(exc),progress=100)
+        except Exception:
+            # Never leave the dashboard in an indefinite 10%/pipeline state.
+            with self._guard:
+                self.status.update(status="failed",stage="failed",failure_count=1,
+                                   failure_reason="점검 실행 중 내부 오류가 발생했습니다.",progress=100,
+                                   ended_at=datetime.now(timezone.utc).isoformat())
         finally: lock.release()
