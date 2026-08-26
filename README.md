@@ -51,3 +51,4 @@ python run_all.py --mode daily --target fruit --max-urls 10
 동시성 1, 요청 간격 1초다. E 실제 운영시험은 Codex 환경 네트워크 차단으로 미완료이며,
 F 자동 배치와 G 대시보드는 fixture 검증 완료다.
 
+# website_monitoring
