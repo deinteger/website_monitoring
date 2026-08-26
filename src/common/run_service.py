@@ -4,6 +4,22 @@ from datetime import datetime, timezone
 import threading
 from src.common.execution_lock import ExecutionLock, ExecutionLockedError
 from src.daily_pipeline import DailyPipeline
+from src.common.config_loader import load_config
+
+class OperationalPayload:
+    """Small production adapter feeding the shared pipeline finalization path."""
+    def __init__(self, transport, target="all", max_urls=10): self.transport=transport; self.target=target; self.max_urls=max_urls
+    def build_payload(self):
+        config=load_config("config"); targets=list(config.targets) if self.target=="all" else [self.target]
+        pages=[]
+        for identifier in targets:
+            target=config.targets[identifier]; response=self.transport.fetch(target.base_url)
+            pages.append({"target_id":identifier,"url":target.base_url,"title":target.name,
+                          "verdict":"정상" if response.status_code < 400 else "점검 불가",
+                          "status_code":response.status_code,"response_time":response.elapsed_seconds,
+                          "checked_at":datetime.now(timezone.utc).isoformat(),
+                          "transport":response.actual_transport,"connection_result":response.connection_result})
+        return {"page_results":pages,"coverage_summary":{},"run_metadata":{"target":self.target,"max_urls":self.max_urls}}
 
 class DailyRunService:
     def __init__(self, state_dir="state", output_root="output"):
@@ -41,7 +57,7 @@ class DailyRunService:
             if fixture is not None:
                 result=pipeline.run_raw_fixture(fixture,run_id=run_id) if fixture.get("responses") else pipeline.run_offline(fixture,run_id=run_id)
             else:
-                result=pipeline.run_with_transport(transport,run_id=run_id,transport_name=getattr(transport,"name","auto"))
+                result=pipeline.run_with_transport(OperationalPayload(transport,self.status.get("target","all"),self.status.get("max_urls",10)),run_id=run_id,transport_name=getattr(transport,"name","auto"))
             result.setdefault("exit_code", 0 if result.get("status") == "completed" else 2)
             public={k:v for k,v in result.items() if k in {"run_id","status","exit_code","report_path","execution_stages"}}
             with self._guard: self.status.update(public,status="completed" if result.get("exit_code")==0 else "partial_failed",stage="finished",progress=100,ended_at=datetime.now(timezone.utc).isoformat(),processed_count=len((fixture or {}).get("page_results",[])))

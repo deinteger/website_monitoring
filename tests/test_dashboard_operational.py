@@ -38,3 +38,12 @@ def test_operational_run_accepts_only_safe_options(tmp_path):
     h=make_handler(tmp_path/"state",tmp_path/"output",transport_factory=lambda: type("T",(),{"name":"mock","build_payload":lambda self:{"page_results":[],"coverage_summary":{}}})())
     response=json.loads(call(h,"do_POST","/api/run",json.dumps({"target":"fruit","max_urls":10,"force_resource":True,"force_accessibility":False,"force_screenshot":True}).encode()))
     assert response["target"]=="fruit" and response["max_urls"]==10
+
+def test_operational_adapter_uses_shared_pipeline_without_http(tmp_path):
+    from src.common.run_service import OperationalPayload
+    from src.inventory.collector import FetchResponse
+    class Fake:
+        name="fixture-operational"
+        def fetch(self,url): return FetchResponse(url,200,"ok",0.01,{},"fixture","fixture",False,False,"","success")
+    payload=OperationalPayload(Fake(),"nihhs",10).build_payload()
+    assert payload["page_results"][0]["target_id"]=="nihhs" and payload["page_results"][0]["status_code"]==200
