@@ -55,7 +55,7 @@ class DailyRunService:
     def request_stop(self):
         with self._guard:
             if self.status.get("status") != "running": return False
-            self._cancel=True; self.status["stop_requested"]=True; self.status["stage"]="stop_requested"; self.status["status"]="stop_requested"; return True
+            self._cancel=True; self.status["stop_requested"]=True; self.status["stage"]="stop_requested"; self.status["status"]="stop_requested"; self.status["ended_at"]=datetime.now(timezone.utc).isoformat(); return True
 
     def _run(self, fixture, transport, run_id, mode):
         lock=ExecutionLock(self.state_dir)
