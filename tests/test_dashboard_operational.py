@@ -65,3 +65,17 @@ def test_operational_dashboard_full_flow_with_mock_transport(tmp_path):
         time.sleep(.03)
     assert status.get("status")=="completed" and (tmp_path/"state"/"run_history.jsonl").exists()
     assert list((tmp_path/"output").glob("**/*.xlsx"))
+
+def test_operational_crawls_internal_links_without_sitemap(tmp_path):
+    from src.common.run_service import OperationalPayload
+    from src.inventory.collector import FetchResponse
+    class Fake:
+        name="crawl"
+        def fetch(self,url):
+            html="<a href='/a'>A</a>" if url.endswith('/') else "<a href='/b'>B</a>" if url.endswith('/a') else "<p>end</p>"
+            return FetchResponse(url,200,html,0.01,{},self.name,self.name,False,False,"","success")
+    payload=OperationalPayload(Fake(),"nihhs",3)
+    from src.common.config_loader import load_config
+    target=load_config('config').targets['nihhs']; from src.inventory.collector import InventoryCollector,RequestFetcher
+    inv=InventoryCollector(target,RequestFetcher(user_agent='test',timeout=1,max_retries=0,interval=0,max_requests=3,transport=Fake()),max_requests=3,include_root=True,crawl_internal=True).collect()
+    assert len(inv.records)>=2

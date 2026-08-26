@@ -132,11 +132,12 @@ def _blocked(response: FetchResponse) -> str | None:
 
 
 class InventoryCollector:
-    def __init__(self, target: Target, fetcher: Fetcher, *, max_requests: int = 10, include_root: bool = False) -> None:
+    def __init__(self, target: Target, fetcher: Fetcher, *, max_requests: int = 10, include_root: bool = False, crawl_internal: bool = False) -> None:
         self.target = target
         self.fetcher = fetcher
         self.max_requests = max_requests
         self.include_root = include_root
+        self.crawl_internal = crawl_internal
         self._responses: dict[str, FetchResponse] = {}
         self._errors: dict[str, FetchError] = {}
         self._visited_sitemaps: set[str] = set()
@@ -255,6 +256,19 @@ class InventoryCollector:
         main = self._run_page_source("main_menu", main_url, list(menu.get("main_selectors", [])))
         if self.include_root and main.success:
             self._add("root", main_url, main_url, self.target.name, "")
+            if self.crawl_internal:
+                self._parse_menu("crawl", main_url, self._responses[main_url].text, ["a"], main)
+                queue=list(self._records)
+                seen={main_url}
+                while queue and len(self._responses) < self.max_requests:
+                    url=queue.pop(0)
+                    if url in seen: continue
+                    seen.add(url)
+                    try: page=self._get(url)
+                    except FetchError: continue
+                    before=set(self._records)
+                    self._parse_menu("crawl", url, page.text, ["a"], main)
+                    queue.extend(x for x in self._records if x not in before and x not in seen)
         self._parse_all_menu(main_url, menu, main)
         sitemap = SourceResult("sitemap")
         sitemap_path = str(menu.get("sitemap_path", "/sitemap.xml"))

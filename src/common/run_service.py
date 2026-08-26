@@ -26,7 +26,7 @@ class OperationalPayload:
         for identifier in targets:
             target=config.targets[identifier]
             fetcher=RequestFetcher(user_agent=config.crawl.user_agent,timeout=config.crawl.timeout_seconds,max_retries=config.crawl.max_retries,interval=config.crawl.request_interval_seconds,max_requests=self.max_urls,transport=self.transport)
-            inventory=InventoryCollector(target,fetcher,max_requests=self.max_urls,include_root=True).collect()
+            inventory=InventoryCollector(target,fetcher,max_requests=self.max_urls,include_root=True,crawl_internal=True).collect()
             for record in inventory.records[:self.max_urls]:
                 url=getattr(record,"normalized_url",None) or next(iter(getattr(record,"original_urls",()) or (target.base_url,)))
                 response=self.transport.fetch(url); responses[url]={"status_code":response.status_code,"html":response.text,"elapsed_seconds":response.elapsed_seconds,"headers":response.headers}
