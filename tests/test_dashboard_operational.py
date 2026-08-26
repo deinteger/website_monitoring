@@ -1,4 +1,5 @@
 import json
+import time
 from io import BytesIO
 
 from src.dashboard import make_handler
@@ -47,3 +48,20 @@ def test_operational_adapter_uses_shared_pipeline_without_http(tmp_path):
         def fetch(self,url): return FetchResponse(url,200,"ok",0.01,{},"fixture","fixture",False,False,"","success")
     payload=OperationalPayload(Fake(),"nihhs",10).build_payload()
     assert payload["page_results"][0]["target_id"]=="nihhs" and payload["page_results"][0]["status_code"]==200
+
+def test_operational_dashboard_full_flow_with_mock_transport(tmp_path):
+    from src.inventory.collector import FetchResponse
+    class Fake:
+        name="mock-operational"
+        def fetch(self,url):
+            html="<html lang='ko'><head><title>테스트</title></head><body><main>ok</main></body></html>"
+            return FetchResponse(url,200,html,0.01,{},self.name,self.name,False,False,"","success")
+    h=make_handler(tmp_path/"state",tmp_path/"output",transport_factory=lambda:Fake())
+    body=json.dumps({"target":"nihhs","max_urls":2}).encode(); raw=call(h,"do_POST","/api/run",body); assert json.loads(raw)["status"]=="running"
+    status={}
+    for _ in range(100):
+        status=json.loads(call(h,"do_GET","/api/status"))
+        if status.get("status")!="running": break
+        time.sleep(.03)
+    assert status.get("status")=="completed" and (tmp_path/"state"/"run_history.jsonl").exists()
+    assert list((tmp_path/"output").glob("**/*.xlsx"))
